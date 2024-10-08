@@ -1,4 +1,7 @@
 import { transformField, transformPreset } from './transformFunctions';
+import { transformMetadata, transformPresetsJson, transformTranslations } from './transformConfig';
+import * as fs from 'fs';
+import * as child_process from 'child_process';
 
 describe('transformField', () => {
   it('should transform an old field to the new format', () => {
@@ -8,6 +11,9 @@ describe('transformField', () => {
       "label": "Building type",
       "placeholder": "School/hospital/etc",
       "options": ["School", "Hospital", "Homestead", "Church", "Shop", "Other"]
+      "fieldRefs": [],
+      "removeTags": {},
+      "addTags": {}
     };
 
     const expectedNewField = {
@@ -56,6 +62,145 @@ describe('transformField', () => {
     const newField = transformField({ ...oldField });
 
     expect(newField).toEqual(expectedNewField);
+  });
+});
+
+describe('transformMetadata', () => {
+  it('should transform metadata.json correctly', () => {
+    const metadataPath = 'path/to/metadata.json';
+    const oldMetadata = {
+      "dataset_id": "mapeo-jungle",
+      "name": "mapeo-default-settings",
+      "version": "3.6.1"
+    };
+    const expectedMetadata = {
+      "name": "mapeo-jungle",
+      "version": "3.6.1",
+      "fileVersion": "1.0",
+      "buildDate": expect.any(String)
+    };
+
+    jest.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(oldMetadata));
+    const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+
+    transformMetadata(metadataPath);
+
+    expect(writeSpy).toHaveBeenCalledWith(
+      metadataPath,
+      JSON.stringify(expectedMetadata, null, 4),
+      'utf8'
+    );
+  });
+});
+
+describe('transformPresetsJson', () => {
+  it('should transform presets.json correctly', () => {
+    const presetsPath = 'path/to/presets.json';
+    const oldPresets = {
+      "categories": {},
+      "fields": {
+        "animal-type": {},
+        "building-type": {}
+      },
+      "presets": {
+        "animal": {},
+        "building": {}
+      },
+      "defaults": {}
+    };
+    const expectedPresets = {
+      "categories": {},
+      "fields": {
+        "animal-type": {},
+        "building-type": {}
+      },
+      "presets": {
+        "animal": {},
+        "building": {}
+      },
+      "defaults": {}
+    };
+
+    jest.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(oldPresets));
+    const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+
+    transformPresetsJson(presetsPath);
+
+    expect(writeSpy).toHaveBeenCalledWith(
+      presetsPath,
+      JSON.stringify(expectedPresets, null, 4),
+      'utf8'
+    );
+  });
+});
+
+describe('transformTranslations', () => {
+  it('should transform translations.json correctly', () => {
+    const translationsPath = 'path/to/translations.json';
+    const oldTranslations = {
+      "es": {
+        "fields": {
+          "animal-type": {},
+          "building-type": {}
+        },
+        "presets": {},
+        "categories": {}
+      }
+    };
+    const expectedTranslations = {
+      "es": {
+        "fields": {
+          "animal-type": {},
+          "building-type": {}
+        },
+        "presets": {},
+        "categories": {}
+      }
+    };
+
+    jest.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(oldTranslations));
+    const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+
+    transformTranslations(translationsPath);
+
+    expect(writeSpy).toHaveBeenCalledWith(
+      translationsPath,
+      JSON.stringify(expectedTranslations, null, 4),
+      'utf8'
+    );
+  });
+});
+
+describe('transformConfig', () => {
+  it('should handle .mapeosettings file correctly', () => {
+    const oldConfigPath = 'path/to/config.mapeosettings';
+    const newConfigPath = 'path/to/new_config';
+
+    jest.spyOn(fs, 'lstatSync').mockImplementation((path: string) => {
+      if (path === oldConfigPath) {
+        return { isFile: () => true };
+      }
+      return { isDirectory: () => true };
+    });
+    jest.spyOn(child_process, 'execSync').mockImplementation(() => {});
+    jest.spyOn(fs, 'mkdtempSync').mockReturnValue('/tmp/mapeo-settings-test');
+    jest.spyOn(fs, 'readdirSync').mockReturnValue([]);
+
+    const copyFolderSpy = jest.spyOn(require('./transformConfig'), 'copyFolder').mockImplementation(() => {});
+    const transformFieldsSpy = jest.spyOn(require('./transformConfig'), 'transformFields').mockImplementation(() => {});
+    const transformPresetsSpy = jest.spyOn(require('./transformConfig'), 'transformPresets').mockImplementation(() => {});
+    const transformMetadataSpy = jest.spyOn(require('./transformConfig'), 'transformMetadata').mockImplementation(() => {});
+    const transformPresetsJsonSpy = jest.spyOn(require('./transformConfig'), 'transformPresetsJson').mockImplementation(() => {});
+    const transformTranslationsSpy = jest.spyOn(require('./transformConfig'), 'transformTranslations').mockImplementation(() => {});
+
+    transformConfig(oldConfigPath, newConfigPath);
+
+    expect(copyFolderSpy).toHaveBeenCalledWith('/tmp/mapeo-settings-test', newConfigPath);
+    expect(transformFieldsSpy).toHaveBeenCalled();
+    expect(transformPresetsSpy).toHaveBeenCalled();
+    expect(transformMetadataSpy).toHaveBeenCalled();
+    expect(transformPresetsJsonSpy).toHaveBeenCalled();
+    expect(transformTranslationsSpy).toHaveBeenCalled();
   });
 });
 

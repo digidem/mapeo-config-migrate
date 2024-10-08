@@ -67,7 +67,7 @@ function transformPresets(presetsDir: string) {
     console.log('Presets transformation complete.');
 }
 
-function transformMetadata(metadataPath: string) {
+export function transformMetadata(metadataPath: string) {
     console.log('Transforming metadata.json...');
     const data = fs.readFileSync(metadataPath, 'utf8');
     const metadata = JSON.parse(data);
@@ -81,7 +81,7 @@ function transformMetadata(metadataPath: string) {
     console.log('metadata.json transformed.');
 }
 
-function transformPresetsJson(presetsPath: string) {
+export function transformPresetsJson(presetsPath: string) {
     console.log('Transforming presets.json...');
     const data = fs.readFileSync(presetsPath, 'utf8');
     const presets = JSON.parse(data);
@@ -112,7 +112,7 @@ function transformPresetPresetJson(preset: any): any {
     return preset;
 }
 
-function transformTranslations(translationsPath: string) {
+export function transformTranslations(translationsPath: string) {
     console.log('Transforming translations.json...');
     const data = fs.readFileSync(translationsPath, 'utf8');
     const translations = JSON.parse(data);
@@ -154,7 +154,7 @@ export function transformConfig(oldConfigDir: string, newConfigDir: string) {
         process.exit(1);
     }
     console.log('Copying entire config folder...');
-    copyFolder(oldConfigDir, newConfigDir);
+    copyFolder(configDir, newConfigDir);
     console.log('Config folder copied.');
 
     const fieldsDir = path.join(newConfigDir, 'fields');
