@@ -154,29 +154,34 @@ export function transformConfig(oldConfigDir: string, newConfigDir: string) {
         console.error('First argument must be a directory or a .mapeosettings file.');
         process.exit(1);
     }
-    let isMapeoSettings = false;
-
-    if (fs.lstatSync(oldConfigDir).isFile() && oldConfigDir.endsWith('.mapeosettings')) {
-        isMapeoSettings = true;
-        console.log('Detected .mapeosettings file. Extracting to a temporary directory...');
-        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mapeo-settings-'));
-        child_process.execSync(`tar -xf ${oldConfigDir} -C ${tempDir}`);
-        configDir = tempDir;
-        console.log(`Extracted to temporary directory: ${tempDir}`);
-    } else if (!fs.lstatSync(oldConfigDir).isDirectory()) {
-        console.error('First argument must be a directory or a .mapeosettings file.');
-        process.exit(1);
-    }
     console.log('Copying entire config folder...');
     copyFolder(configDir, newConfigDir);
     console.log('Config folder copied.');
 
-    const fieldsDir = path.join(newConfigDir, 'fields');
-    const presetsDir = path.join(newConfigDir, 'presets');
+    const presetsJsonPath = path.join(newConfigDir, 'presets.json');
 
-    console.log('Transforming fields and presets...');
-    transformFields(fieldsDir);
-    transformPresets(presetsDir);
+    if (fs.existsSync(presetsJsonPath)) {
+        console.log('Detected presets.json, transforming presets.json...');
+        transformPresetsJson(presetsJsonPath);
+    } else {
+        const fieldsDir = path.join(newConfigDir, 'fields');
+        const presetsDir = path.join(newConfigDir, 'presets');
+
+        console.log('Transforming fields and presets directories...');
+        transformFields(fieldsDir);
+        transformPresets(presetsDir);
+    }
+
+    const metadataPath = path.join(newConfigDir, 'metadata.json');
+    const translationsPath = path.join(newConfigDir, 'translations.json');
+
+    if (fs.existsSync(metadataPath)) {
+        transformMetadata(metadataPath);
+    }
+
+    if (fs.existsSync(translationsPath)) {
+        transformTranslations(translationsPath);
+    }
 
     console.log('Transformation complete.');
 
