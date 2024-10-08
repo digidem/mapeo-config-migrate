@@ -184,6 +184,7 @@ export function transformConfig(oldConfigDir: string, newConfigDir: string) {
     }
 
     console.log('Transformation complete.');
+    const isMapeoSettings = oldConfigDir.endsWith('.mapeosettings');
 
     if (isMapeoSettings) {
         if (newConfigDir.endsWith('.comapeocat')) {
