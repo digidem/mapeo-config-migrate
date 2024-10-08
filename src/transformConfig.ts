@@ -103,14 +103,14 @@ export function transformPresetsJson(presetsPath: string) {
     console.log('presets.json transformed.');
 }
 
-function transformPresetPresetJson(preset: any): any {
+function transformPresetPresetJson(preset: Record<string, unknown>): Record<string, unknown> {
     // Reorder keys as per existing transformPreset function first
-    preset = transformPreset(preset);
+    const transformedPreset = transformPreset(preset);
     // Additionally, add required fields
-    preset.fieldRefs = [];
-    preset.removeTags = {};
-    preset.addTags = {};
-    return preset;
+    transformedPreset.fieldRefs = [];
+    transformedPreset.removeTags = {};
+    transformedPreset.addTags = {};
+    return transformedPreset;
 }
 
 export function transformTranslations(translationsPath: string) {
@@ -184,13 +184,11 @@ export function transformConfig(oldConfigDir: string, newConfigDir: string) {
         if (newConfigDir.endsWith('.comapeocat')) {
             console.log('Packaging transformed config into .comapeocat file...');
             const output = fs.createWriteStream(newConfigDir);
-            const archive = archiver('zip', { zlib: { level: 9 } });
-
-            output.on('close', function() {
+            const archive = archiver.create('zip', { zlib: { level: 9 } });
+            output.on('close', () => {
                 console.log(`Packaged transformed config into ${newConfigDir} (${archive.pointer()} total bytes)`);
             });
-
-            archive.on('error', function(err) {
+            archive.on('error', (err: Error) => {
                 throw err;
             });
 

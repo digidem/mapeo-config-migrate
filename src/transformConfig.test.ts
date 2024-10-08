@@ -6,6 +6,8 @@ jest.mock('child_process');
 import * as fs from 'fs';
 import * as child_process from 'child_process';
 
+const writeSpy = jest.spyOn(fs, 'writeFileSync');
+
 beforeEach(() => {
   jest.resetAllMocks();
 });
