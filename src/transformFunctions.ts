@@ -1,17 +1,18 @@
 export function transformField(field: any): any {
-    if (field.key) {
-        field.tagKey = field.key;
-        delete field.key;
+    const transformedField: any = { ...field };
+    if (transformedField.key) {
+        transformedField.tagKey = transformedField.key;
+        delete transformedField.key;
     }
-    if (field.type) {
-        field.type = field.type.replace(/_(\w)/g, (match: string, letter: string) => letter.toUpperCase());
+    if (transformedField.type) {
+        transformedField.type = transformedField.type.replace(/_(\w)/g, (match: string, letter: string) => letter.toUpperCase());
     }
-    if (field.placeholder) {
-        field.helperText = field.placeholder;
-        delete field.placeholder;
+    if (transformedField.placeholder) {
+        transformedField.helperText = transformedField.placeholder;
+        delete transformedField.placeholder;
     }
-    if (field.options && Array.isArray(field.options)) {
-        field.options = field.options.map((option: string | Record<string, unknown>) => {
+    if (transformedField.options && Array.isArray(transformedField.options)) {
+        transformedField.options = transformedField.options.map((option: string | Record<string, unknown>) => {
             if (typeof option === 'string') {
                 return {
                     label: option,
@@ -21,8 +22,8 @@ export function transformField(field: any): any {
             return option;
         });
     }
-    field.universal = false;
-    return field;
+    transformedField.universal = false;
+    return transformedField;
 }
 
 export function transformPreset(preset: any): any {

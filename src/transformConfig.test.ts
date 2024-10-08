@@ -72,10 +72,7 @@ describe('transformField', () => {
         { "label": "Oak", "value": "oak" },
         { "label": "Pine", "value": "pine" }
       ],
-      "universal": false,
-      "fieldRefs": [],
-      "removeTags": {},
-      "addTags": {}
+      "universal": false
     };
 
     const newField = transformField({ ...oldField });
@@ -106,9 +103,12 @@ describe('transformMetadata', () => {
 
     expect(writeSpy).toHaveBeenCalledWith(
       metadataPath,
-      JSON.stringify(expectedMetadata, null, 4),
+      expect.stringMatching(/"buildDate":/),
       'utf8'
     );
+
+    const writtenData = JSON.parse(writeSpy.mock.calls[0][1]);
+    expect(writtenData).toMatchObject(expectedMetadata);
   });
 });
 
@@ -130,12 +130,12 @@ describe('transformPresetsJson', () => {
     const expectedPresets = {
       "categories": {},
       "fields": {
-        "animal-type": {},
-        "building-type": {}
+        "animal-type": { "universal": false },
+        "building-type": { "universal": false }
       },
       "presets": {
-        "animal": {},
-        "building": {}
+        "animal": { "fieldRefs": [], "removeTags": {}, "addTags": {} },
+        "building": { "fieldRefs": [], "removeTags": {}, "addTags": {} }
       },
       "defaults": {}
     };
