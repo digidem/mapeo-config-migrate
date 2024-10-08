@@ -38,5 +38,10 @@ export function transformPreset(preset: any): any {
             orderedPreset[key] = preset[key];
         }
     }
+    // Add additional required properties
+    orderedPreset.fieldRefs = [];
+    orderedPreset.removeTags = {};
+    orderedPreset.addTags = {};
+
     return orderedPreset;
 }
