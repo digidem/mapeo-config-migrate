@@ -1,5 +1,5 @@
 import { transformField, transformPreset } from './transformFunctions';
-import { transformMetadata, transformPresetsJson, transformTranslations } from './transformConfig';
+import { transformConfig, transformMetadata, transformPresetsJson, transformTranslations } from './transformConfig';
 import * as fs from 'fs';
 import * as child_process from 'child_process';
 
@@ -10,7 +10,7 @@ describe('transformField', () => {
       "type": "select_one",
       "label": "Building type",
       "placeholder": "School/hospital/etc",
-      "options": ["School", "Hospital", "Homestead", "Church", "Shop", "Other"]
+      "options": ["School", "Hospital", "Homestead", "Church", "Shop", "Other"],
       "fieldRefs": [],
       "removeTags": {},
       "addTags": {}
@@ -176,13 +176,13 @@ describe('transformConfig', () => {
     const oldConfigPath = 'path/to/config.mapeosettings';
     const newConfigPath = 'path/to/new_config';
 
-    jest.spyOn(fs, 'lstatSync').mockImplementation((path: string) => {
-      if (path === oldConfigPath) {
-        return { isFile: () => true };
-      }
-      return { isDirectory: () => true };
+    jest.spyOn(fs, 'lstatSync').mockImplementation((path: fs.PathLike) => {
+      return {
+        isFile: () => path === 'path/to/config.mapeosettings',
+        isDirectory: () => path !== 'path/to/config.mapeosettings',
+      } as fs.Stats;
     });
-    jest.spyOn(child_process, 'execSync').mockImplementation(() => {});
+    jest.spyOn(child_process, 'execSync').mockImplementation(() => Buffer.from(''));
     jest.spyOn(fs, 'mkdtempSync').mockReturnValue('/tmp/mapeo-settings-test');
     jest.spyOn(fs, 'readdirSync').mockReturnValue([]);
 
