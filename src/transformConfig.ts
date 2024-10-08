@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as archiver from 'archiver';
 import * as path from 'path';
 import * as os from 'os';
 import * as child_process from 'child_process';
@@ -153,6 +154,19 @@ export function transformConfig(oldConfigDir: string, newConfigDir: string) {
         console.error('First argument must be a directory or a .mapeosettings file.');
         process.exit(1);
     }
+    let isMapeoSettings = false;
+
+    if (fs.lstatSync(oldConfigDir).isFile() && oldConfigDir.endsWith('.mapeosettings')) {
+        isMapeoSettings = true;
+        console.log('Detected .mapeosettings file. Extracting to a temporary directory...');
+        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mapeo-settings-'));
+        child_process.execSync(`tar -xf ${oldConfigDir} -C ${tempDir}`);
+        configDir = tempDir;
+        console.log(`Extracted to temporary directory: ${tempDir}`);
+    } else if (!fs.lstatSync(oldConfigDir).isDirectory()) {
+        console.error('First argument must be a directory or a .mapeosettings file.');
+        process.exit(1);
+    }
     console.log('Copying entire config folder...');
     copyFolder(configDir, newConfigDir);
     console.log('Config folder copied.');
@@ -164,7 +178,33 @@ export function transformConfig(oldConfigDir: string, newConfigDir: string) {
     transformFields(fieldsDir);
     transformPresets(presetsDir);
 
-    console.log('Transformation complete. New config generated at:', newConfigDir);
+    console.log('Transformation complete.');
+
+    if (isMapeoSettings) {
+        if (newConfigDir.endsWith('.comapeocat')) {
+            console.log('Packaging transformed config into .comapeocat file...');
+            const output = fs.createWriteStream(newConfigDir);
+            const archive = archiver('zip', { zlib: { level: 9 } });
+
+            output.on('close', function() {
+                console.log(`Packaged transformed config into ${newConfigDir} (${archive.pointer()} total bytes)`);
+            });
+
+            archive.on('error', function(err) {
+                throw err;
+            });
+
+            archive.pipe(output);
+            archive.directory(configDir, false);
+            archive.finalize();
+        } else {
+            console.log('Copying transformed config to specified directory...');
+            copyFolder(configDir, newConfigDir);
+            console.log('Transformed config copied to:', newConfigDir);
+        }
+    } else {
+        console.log('New config generated at:', newConfigDir);
+    }
 }
 
 if (require.main === module) {

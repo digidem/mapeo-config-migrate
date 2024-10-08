@@ -1,7 +1,18 @@
 import { transformField, transformPreset } from './transformFunctions';
 import { transformConfig, transformMetadata, transformPresetsJson, transformTranslations } from './transformConfig';
+jest.mock('fs');
+jest.mock('child_process');
+
 import * as fs from 'fs';
 import * as child_process from 'child_process';
+
+beforeEach(() => {
+  jest.resetAllMocks();
+});
+
+afterEach(() => {
+  jest.clearAllMocks();
+});
 
 describe('transformField', () => {
   it('should transform an old field to the new format', () => {
@@ -29,7 +40,10 @@ describe('transformField', () => {
         { "label": "Shop", "value": "Shop" },
         { "label": "Other", "value": "Other" }
       ],
-      "universal": false
+      "universal": false,
+      "fieldRefs": [],
+      "removeTags": {},
+      "addTags": {}
     };
 
     const newField = transformField({ ...oldField });
@@ -56,7 +70,10 @@ describe('transformField', () => {
         { "label": "Oak", "value": "oak" },
         { "label": "Pine", "value": "pine" }
       ],
-      "universal": false
+      "universal": false,
+      "fieldRefs": [],
+      "removeTags": {},
+      "addTags": {}
     };
 
     const newField = transformField({ ...oldField });
@@ -80,8 +97,8 @@ describe('transformMetadata', () => {
       "buildDate": expect.any(String)
     };
 
-    jest.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(oldMetadata));
-    const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(oldMetadata));
+    (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
 
     transformMetadata(metadataPath);
 
@@ -121,8 +138,8 @@ describe('transformPresetsJson', () => {
       "defaults": {}
     };
 
-    jest.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(oldPresets));
-    const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(oldPresets));
+    (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
 
     transformPresetsJson(presetsPath);
 
@@ -158,8 +175,8 @@ describe('transformTranslations', () => {
       }
     };
 
-    jest.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(oldTranslations));
-    const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(oldTranslations));
+    (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
 
     transformTranslations(translationsPath);
 
@@ -176,7 +193,7 @@ describe('transformConfig', () => {
     const oldConfigPath = 'path/to/config.mapeosettings';
     const newConfigPath = 'path/to/new_config';
 
-    jest.spyOn(fs, 'lstatSync').mockImplementation((path: fs.PathLike) => {
+    (fs.lstatSync as jest.Mock).mockImplementation((path: fs.PathLike) => {
       return {
         isFile: () => path === 'path/to/config.mapeosettings',
         isDirectory: () => path !== 'path/to/config.mapeosettings',
@@ -186,12 +203,22 @@ describe('transformConfig', () => {
     jest.spyOn(fs, 'mkdtempSync').mockReturnValue('/tmp/mapeo-settings-test');
     jest.spyOn(fs, 'readdirSync').mockReturnValue([]);
 
-    const copyFolderSpy = jest.spyOn(require('./transformConfig'), 'copyFolder').mockImplementation(() => {});
-    const transformFieldsSpy = jest.spyOn(require('./transformConfig'), 'transformFields').mockImplementation(() => {});
-    const transformPresetsSpy = jest.spyOn(require('./transformConfig'), 'transformPresets').mockImplementation(() => {});
-    const transformMetadataSpy = jest.spyOn(require('./transformConfig'), 'transformMetadata').mockImplementation(() => {});
-    const transformPresetsJsonSpy = jest.spyOn(require('./transformConfig'), 'transformPresetsJson').mockImplementation(() => {});
-    const transformTranslationsSpy = jest.spyOn(require('./transformConfig'), 'transformTranslations').mockImplementation(() => {});
+    const copyFolderSpy = jest.fn();
+    const transformFieldsSpy = jest.fn();
+    const transformPresetsSpy = jest.fn();
+    const transformMetadataSpy = jest.fn();
+    const transformPresetsJsonSpy = jest.fn();
+    const transformTranslationsSpy = jest.fn();
+
+    jest.mock('./transformConfig', () => ({
+      ...jest.requireActual('./transformConfig'),
+      copyFolder: copyFolderSpy,
+      transformFields: transformFieldsSpy,
+      transformPresets: transformPresetsSpy,
+      transformMetadata: transformMetadataSpy,
+      transformPresetsJson: transformPresetsJsonSpy,
+      transformTranslations: transformTranslationsSpy,
+    }));
 
     transformConfig(oldConfigPath, newConfigPath);
 
@@ -223,7 +250,10 @@ describe('transformPreset', () => {
       "fields": ["animal-type"],
       "geometry": ["point", "area"],
       "tags": { "type": "animal" },
-      "terms": []
+      "terms": [],
+      "fieldRefs": [],
+      "removeTags": {},
+      "addTags": {}
     };
 
     const newPreset = transformPreset({ ...oldPreset });
