@@ -107,7 +107,7 @@ describe('transformMetadata', () => {
       'utf8'
     );
 
-    const writtenData = JSON.parse(writeSpy.mock.calls[0][1]);
+    const writtenData = JSON.parse(writeSpy.mock.calls[0][1] as string);
     expect(writtenData).toMatchObject(expectedMetadata);
   });
 });
