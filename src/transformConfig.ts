@@ -139,7 +139,7 @@ export function transformTranslations(translationsPath: string) {
     console.log('translations.json transformed.');
 }
 
-function transformConfig(oldConfigDir: string, newConfigDir: string) {
+export function transformConfig(oldConfigDir: string, newConfigDir: string) {
     console.log('Checking if the first argument is a folder or a .mapeosettings file...');
     let configDir = oldConfigDir;
 
