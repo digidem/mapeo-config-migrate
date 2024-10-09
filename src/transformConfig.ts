@@ -150,95 +150,92 @@ export function transformTranslations(translationsPath: string) {
 	console.log("translations.json transformed.");
 }
 
+function extractMapeosettings(oldConfigDir: string): string {
+    console.log("Detected .mapeosettings file. Extracting to a temporary directory...");
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mapeo-settings-"));
+    child_process.execSync(`tar -xf ${oldConfigDir} -C ${tempDir}`);
+    console.log(`Extracted to temporary directory: ${tempDir}`);
+    return tempDir;
+}
+
+function transformConfigFolder(oldConfigDir: string, newConfigDir: string) {
+    console.log("Copying entire config folder...");
+    copyFolder(oldConfigDir, newConfigDir);
+    console.log("Config folder copied.");
+
+    console.log("Transforming fields and presets directories...");
+    transformFields(path.join(newConfigDir, "fields"));
+    transformPresets(path.join(newConfigDir, "presets"));
+}
+
+function transformCommonFiles(newConfigDir: string) {
+    const metadataPath = path.join(newConfigDir, "metadata.json");
+    if (fs.existsSync(metadataPath)) {
+        transformMetadata(metadataPath);
+    }
+
+    const translationsPath = path.join(newConfigDir, "translations.json");
+    if (fs.existsSync(translationsPath)) {
+        transformTranslations(translationsPath);
+    }
+
+    const presetsJsonPath = path.join(newConfigDir, "presets.json");
+    if (fs.existsSync(presetsJsonPath)) {
+        console.log("Detected presets.json, transforming presets.json...");
+        transformPresetsJson(presetsJsonPath);
+    }
+}
+
+function packageComapeocat(oldConfigDir: string, newConfigDir: string, configDir: string) {
+    console.log("Packaging transformed config into .comapeocat file...");
+    const baseName = path.basename(oldConfigDir, ".mapeosettings");
+    const comapeocatName = newConfigDir.endsWith(".comapeocat")
+        ? newConfigDir
+        : path.join(newConfigDir, `${baseName}.comapeocat`);
+    
+    const comapeocatDir = path.dirname(comapeocatName);
+    if (!fs.existsSync(comapeocatDir)) {
+        fs.mkdirSync(comapeocatDir, { recursive: true });
+    }
+
+    const output = fs.createWriteStream(comapeocatName);
+    const archive = archiver.create("zip", { zlib: { level: 9 } });
+    output.on("close", () => {
+        console.log(`Packaged transformed config into ${comapeocatName} (${archive.pointer()} total bytes)`);
+    });
+    archive.on("error", (err: Error) => {
+        throw err;
+    });
+
+    archive.pipe(output);
+    archive.directory(configDir, false);
+    archive.finalize();
+}
+
 export function transformConfig(oldConfigDir: string, newConfigDir: string) {
-	const isMapeoSettings =
-		fs.lstatSync(oldConfigDir).isFile() &&
-		oldConfigDir.endsWith(".mapeosettings");
-	console.log(
-		"Checking if the first argument is a folder or a .mapeosettings file...",
-	);
-	let configDir = oldConfigDir;
+    console.log("Checking if the first argument is a folder or a .mapeosettings file...");
+    const isMapeoSettings = fs.lstatSync(oldConfigDir).isFile() && oldConfigDir.endsWith(".mapeosettings");
+    let configDir = oldConfigDir;
 
-	// Check if the oldConfigDir is a .mapeosettings file
-	if (isMapeoSettings) {
-		console.log("Detected .mapeosettings file. Extracting to a temporary directory...");
-		
-		// Create a temporary directory for extraction
-		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mapeo-settings-"));
-		
-		// Extract the .mapeosettings file into the temporary directory
-		child_process.execSync(`tar -xf ${oldConfigDir} -C ${tempDir}`);
-		configDir = tempDir;
-		console.log(`Extracted to temporary directory: ${tempDir}`);
-		
-		// Check and transform presets.json if it exists
-		const presetsJsonPath = path.join(newConfigDir, "presets.json");
-		if (fs.existsSync(presetsJsonPath)) {
-			console.log("Detected presets.json, transforming presets.json...");
-			transformPresetsJson(presetsJsonPath);
-		}
-	} else {
-		// Validate that the oldConfigDir is a directory
-		if (!fs.lstatSync(oldConfigDir).isDirectory()) {
-			console.error("First argument must be a directory or a .mapeosettings file.");
-			process.exit(1);
-		}
-		
-		// Copy the entire config folder to the new location
-		console.log("Copying entire config folder...");
-		copyFolder(configDir, newConfigDir);
-		console.log("Config folder copied.");
+    if (isMapeoSettings) {
+        configDir = extractMapeosettings(oldConfigDir);
+    } else {
+        if (!fs.lstatSync(oldConfigDir).isDirectory()) {
+            console.error("First argument must be a directory or a .mapeosettings file.");
+            process.exit(1);
+        }
+        transformConfigFolder(oldConfigDir, newConfigDir);
+    }
 
-		// Transform fields and presets directories
-		console.log("Transforming fields and presets directories...");
-		transformFields(path.join(newConfigDir, "fields"));
-		transformPresets(path.join(newConfigDir, "presets"));
-	}
+    transformCommonFiles(newConfigDir);
 
-	// Transform metadata.json if it exists
-	const metadataPath = path.join(newConfigDir, "metadata.json");
-	if (fs.existsSync(metadataPath)) {
-		transformMetadata(metadataPath);
-	}
+    console.log("Transformation complete.");
 
-	// Transform translations.json if it exists
-	const translationsPath = path.join(newConfigDir, "translations.json");
-	if (fs.existsSync(translationsPath)) {
-		transformTranslations(translationsPath);
-	}
-
-	console.log("Transformation complete.");
-
-	// If it was a .mapeosettings file, package the transformed config
-	if (isMapeoSettings) {
-		console.log("Packaging transformed config into .comapeocat file...");
-		const baseName = path.basename(oldConfigDir, ".mapeosettings");
-		const comapeocatName = newConfigDir.endsWith(".comapeocat")
-			? newConfigDir
-			: path.join(newConfigDir, `${baseName}.comapeocat`);
-		
-		// Ensure the directory for the comapeocat file exists
-		const comapeocatDir = path.dirname(comapeocatName);
-		if (!fs.existsSync(comapeocatDir)) {
-			fs.mkdirSync(comapeocatDir, { recursive: true });
-		}
-
-		// Create a zip archive of the transformed config
-		const output = fs.createWriteStream(comapeocatName);
-		const archive = archiver.create("zip", { zlib: { level: 9 } });
-		output.on("close", () => {
-			console.log(`Packaged transformed config into ${comapeocatName} (${archive.pointer()} total bytes)`);
-		});
-		archive.on("error", (err: Error) => {
-			throw err;
-		});
-
-		archive.pipe(output);
-		archive.directory(configDir, false);
-		archive.finalize();
-	} else {
-		console.log("New config generated at:", newConfigDir);
-	}
+    if (isMapeoSettings) {
+        packageComapeocat(oldConfigDir, newConfigDir, configDir);
+    } else {
+        console.log("New config generated at:", newConfigDir);
+    }
 }
 
 if (require.main === module) {
