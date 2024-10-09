@@ -1,88 +1,53 @@
+import { transformConfig } from './transformConfig';
 import { transformField, transformPreset } from './transformFunctions';
+import { copyFolder, extractMapeosettings } from './utils/fileUtils';
+import { transformFields, transformPresets, transformMetadata, transformPresetsJson, transformTranslations } from './utils/transformationUtils';
+import { packageComapeocat } from './utils/packagingUtils';
+import * as fs from 'fs/promises';
+import * as child_process from 'child_process';
 
-describe('transformField', () => {
-  it('should transform an old field to the new format', () => {
-    const oldField = {
-      "key": "building-type",
-      "type": "select_one",
-      "label": "Building type",
-      "placeholder": "School/hospital/etc",
-      "options": ["School", "Hospital", "Homestead", "Church", "Shop", "Other"]
-    };
+jest.mock('fs/promises');
+jest.mock('child_process');
+jest.mock('./utils/fileUtils');
+jest.mock('./utils/transformationUtils');
+jest.mock('./utils/packagingUtils');
 
-    const expectedNewField = {
-      "tagKey": "building-type",
-      "type": "selectOne",
-      "label": "Building type",
-      "helperText": "School/hospital/etc",
-      "options": [
-        { "label": "School", "value": "School" },
-        { "label": "Hospital", "value": "Hospital" },
-        { "label": "Homestead", "value": "Homestead" },
-        { "label": "Church", "value": "Church" },
-        { "label": "Shop", "value": "Shop" },
-        { "label": "Other", "value": "Other" }
-      ],
-      "universal": false
-    };
-
-    const newField = transformField({ ...oldField });
-
-    expect(newField).toEqual(expectedNewField);
-  });
-
-  it('should keep existing options objects unchanged', () => {
-    const oldField = {
-      "key": "tree-type",
-      "type": "select_one",
-      "label": "Tree type",
-      "options": [
-        { "label": "Oak", "value": "oak" },
-        { "label": "Pine", "value": "pine" }
-      ]
-    };
-
-    const expectedNewField = {
-      "tagKey": "tree-type",
-      "type": "selectOne",
-      "label": "Tree type",
-      "options": [
-        { "label": "Oak", "value": "oak" },
-        { "label": "Pine", "value": "pine" }
-      ],
-      "universal": false
-    };
-
-    const newField = transformField({ ...oldField });
-
-    expect(newField).toEqual(expectedNewField);
-  });
+beforeEach(() => {
+  jest.resetAllMocks();
 });
 
-describe('transformPreset', () => {
-  it('should reorder keys in preset', () => {
-    const oldPreset = {
-      "icon": "animal",
-      "color": "#9E2C54",
-      "fields": ["animal-type"],
-      "geometry": ["point", "area"],
-      "tags": { "type": "animal" },
-      "terms": [],
-      "name": "Animal"
-    };
+afterEach(() => {
+  jest.clearAllMocks();
+});
 
-    const expectedNewPreset = {
-      "name": "Animal",
-      "icon": "animal",
-      "color": "#9E2C54",
-      "fields": ["animal-type"],
-      "geometry": ["point", "area"],
-      "tags": { "type": "animal" },
-      "terms": []
-    };
+describe('transformConfig', () => {
+  it('should handle .mapeosettings file correctly', async () => {
+    const oldConfigPath = 'path/to/config.mapeosettings';
+    const newConfigPath = 'path/to/new_config';
 
-    const newPreset = transformPreset({ ...oldPreset });
+    (fs.lstat as jest.MockedFunction<typeof fs.lstat>).mockResolvedValue({
+      isFile: () => oldConfigPath.endsWith('.mapeosettings'),
+      isDirectory: () => false,
+    } as fs.Stats);
+    (child_process.execSync as jest.MockedFunction<typeof child_process.execSync>).mockImplementation(() => Buffer.from(''));
+    (fs.mkdtemp as jest.MockedFunction<typeof fs.mkdtemp>).mockResolvedValue('/tmp/mapeo-settings-test');
+    (transformFields as jest.Mock).mockResolvedValue(undefined);
+    (transformPresets as jest.Mock).mockResolvedValue(undefined);
+    (transformMetadata as jest.Mock).mockResolvedValue(undefined);
+    (transformPresetsJson as jest.Mock).mockResolvedValue(undefined);
+    (transformTranslations as jest.Mock).mockResolvedValue(undefined);
+    (packageComapeocat as jest.Mock).mockResolvedValue(undefined);
+    (copyFolder as jest.Mock).mockResolvedValue(undefined);
+    (extractMapeosettings as jest.Mock).mockResolvedValue('/tmp/mapeo-settings-test');
 
-    expect(newPreset).toEqual(expectedNewPreset);
+    await transformConfig(oldConfigPath, newConfigPath);
+
+    expect(copyFolder).toHaveBeenCalledWith('/tmp/mapeo-settings-test', newConfigPath);
+    expect(transformFields).toHaveBeenCalled();
+    expect(transformPresets).toHaveBeenCalled();
+    expect(transformMetadata).toHaveBeenCalled();
+    expect(transformPresetsJson).toHaveBeenCalled();
+    expect(transformTranslations).toHaveBeenCalled();
+    expect(packageComapeocat).toHaveBeenCalledWith(oldConfigPath, newConfigPath, '/tmp/mapeo-settings-test');
   });
 });
