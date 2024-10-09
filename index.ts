@@ -1,4 +1,4 @@
-import { transformConfig } from './src/transformConfig';
+import { transformConfig } from './transformConfig';
 import * as path from 'path';
 
 if (require.main === module) {
@@ -18,5 +18,8 @@ if (require.main === module) {
             newConfigDir = path.join(oldConfigDir, 'new_config');
         }
     }
-    transformConfig(oldConfigDir, newConfigDir);
+    transformConfig(oldConfigDir, newConfigDir).catch((error) => {
+        console.error("An error occurred:", error);
+        process.exit(1);
+    });
 }
