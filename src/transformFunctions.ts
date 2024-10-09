@@ -4,10 +4,11 @@ import * as child_process from 'child_process';
 
 export function transformConfig(oldConfigPath: string, newConfigPath: string): void {
     const isFile = fs.lstatSync(oldConfigPath).isFile();
+    const isMapeoSettings = isFile && path.extname(oldConfigPath) === '.mapeosettings';
     const tmpDir = fs.mkdtempSync('/tmp/mapeo-settings-');
 
     try {
-        if (isFile && path.extname(oldConfigPath) === '.mapeosettings') {
+        if (isMapeoSettings) {
             handleMapeosettingsFile(oldConfigPath, tmpDir);
         } else if (!isFile) {
             handleConfigFolder(oldConfigPath, tmpDir);
