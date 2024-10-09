@@ -3,16 +3,14 @@ import { transformField, transformPreset } from './transformFunctions';
 import { copyFolder, extractMapeosettings } from './utils/fileUtils';
 import { transformFields, transformPresets, transformMetadata, transformPresetsJson, transformTranslations } from './utils/transformationUtils';
 import { packageComapeocat } from './utils/packagingUtils';
-import * as fs from 'fs';
+import * as fs from 'fs/promises';
 import * as child_process from 'child_process';
 
-jest.mock('fs');
+jest.mock('fs/promises');
 jest.mock('child_process');
 jest.mock('./utils/fileUtils');
 jest.mock('./utils/transformationUtils');
 jest.mock('./utils/packagingUtils');
-
-const writeSpy = jest.spyOn(fs, 'writeFileSync');
 
 beforeEach(() => {
   jest.resetAllMocks();
@@ -27,12 +25,12 @@ describe('transformConfig', () => {
     const oldConfigPath = 'path/to/config.mapeosettings';
     const newConfigPath = 'path/to/new_config';
 
-    (fs.lstat as jest.Mock).mockResolvedValue({
+    (fs.lstat as jest.MockedFunction<typeof fs.lstat>).mockResolvedValue({
       isFile: () => oldConfigPath.endsWith('.mapeosettings'),
       isDirectory: () => false,
-    });
-    (child_process.execSync as jest.Mock).mockImplementation(() => Buffer.from(''));
-    (fs.mkdtemp as jest.Mock).mockResolvedValue('/tmp/mapeo-settings-test');
+    } as fs.Stats);
+    (child_process.execSync as jest.MockedFunction<typeof child_process.execSync>).mockImplementation(() => Buffer.from(''));
+    (fs.mkdtemp as jest.MockedFunction<typeof fs.mkdtemp>).mockResolvedValue('/tmp/mapeo-settings-test');
     (transformFields as jest.Mock).mockResolvedValue(undefined);
     (transformPresets as jest.Mock).mockResolvedValue(undefined);
     (transformMetadata as jest.Mock).mockResolvedValue(undefined);
